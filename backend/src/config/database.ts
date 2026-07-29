@@ -1,7 +1,11 @@
 import { Pool } from 'pg';
 import { env } from './env';
 
-export const pool = new Pool({ connectionString: env.DATABASE_URL });
+const isNeon = env.DATABASE_URL.includes('neon.tech');
+export const pool = new Pool({
+  connectionString: env.DATABASE_URL,
+  ...(isNeon ? { ssl: { rejectUnauthorized: false } } : {}),
+});
 
 pool.on('error', (err) => {
   console.error('Unexpected error on idle client', err);
