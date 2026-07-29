@@ -71,7 +71,7 @@ export async function finishConference(req: Request, res: Response) {
   await query(
     `INSERT INTO package_history (package_id, status, description, changed_by)
      SELECT id, 'in_stock', 'Conferência finalizada', $1 FROM packages WHERE status = 'in_stock' AND updated_at = NOW()`,
-    [userId = (req as any).userId]
+    [(req as any).userId]
   );
   const counts = await getConferenceCounts();
   res.json({ message: 'Conferência finalizada', hasPending, counts });
