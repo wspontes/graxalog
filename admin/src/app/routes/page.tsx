@@ -80,8 +80,7 @@ export default function RoutesPage() {
                     <td className="p-3">{r.total_packages}</td>
                     <td className="p-3">{r.delivered_count}</td>
                     <td className="p-3">
-                      <button onClick={() => api.routes.list().then(setRoutes)} className="text-xs text-primary-600 hover:underline mr-3"
-                        onClick={async () => { const d = await api.routes.getById(r.id); setSelected(d); }}>
+                      <button onClick={async () => { const d = await api.routes.getById(r.id); setSelected(d); }} className="text-xs text-primary-600 hover:underline">
                         Detalhes
                       </button>
                     </td>

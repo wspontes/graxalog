@@ -17,17 +17,17 @@ export function joinAdmin() {
   getSocket().emit('join:admin');
 }
 
-export function onPackageUpdate(callback: (data: any) => void) {
+export function onPackageUpdate(callback: (data: any) => void): () => void {
   getSocket().on('package:update', callback);
-  return () => getSocket().off('package:update', callback);
+  return () => { getSocket().off('package:update', callback); };
 }
 
-export function onRouteUpdate(callback: (data: any) => void) {
+export function onRouteUpdate(callback: (data: any) => void): () => void {
   getSocket().on('route:update', callback);
-  return () => getSocket().off('route:update', callback);
+  return () => { getSocket().off('route:update', callback); };
 }
 
-export function onDashboardUpdate(callback: (data: any) => void) {
+export function onDashboardUpdate(callback: (data: any) => void): () => void {
   getSocket().on('dashboard:update', callback);
-  return () => getSocket().off('dashboard:update', callback);
+  return () => { getSocket().off('dashboard:update', callback); };
 }
