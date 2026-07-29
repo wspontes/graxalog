@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Avaliação de Projeto - Sistema de Gestão de Entregas</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Inter', -apple-system, sans-serif;
+      background: #f0f2f5;
+      color: #1a1a2e;
+      padding: 32px 16px;
+      display: flex;
+      justify-content: center;
+    }
+    .container { max-width: 920px; width: 100%; }
+    .header {
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      color: #fff;
+      border-radius: 20px;
+      padding: 40px 48px;
+      margin-bottom: 28px;
+      position: relative;
+      overflow: hidden;
+    }
+    .header::after {
+      content: '';
+      position: absolute;
+      top: -50%; right: -20%;
+      width: 400px; height: 400px;
+      background: radial-gradient(circle, rgba(255,255,255,0.04) 0%, transparent 70%);
+      border-radius: 50%;
+    }
+    .header h1 {
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      position: relative;
+      z-index: 1;
+    }
+    .header .subtitle {
+      font-size: 15px;
+      color: rgba(255,255,255,0.7);
+      margin-top: 8px;
+      font-weight: 400;
+      position: relative;
+      z-index: 1;
+    }
+    .header .badge {
+      display: inline-block;
+      background: rgba(255,255,255,0.12);
+      padding: 4px 14px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      margin-top: 16px;
+      position: relative;
+      z-index: 1;
+    }
+    .card {
+      background: #fff;
+      border-radius: 16px;
+      padding: 28px 32px;
+      margin-bottom: 20px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+      border: 1px solid #e8ecf1;
+    }
+    .card h2 {
+      font-size: 18px;
+      font-weight: 700;
+      color: #1a1a2e;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .card h2 .num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px; height: 28px;
+      background: #1a1a2e;
+      color: #fff;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 700;
+    }
+    .card p, .card li { font-size: 14px; line-height: 1.6; color: #374151; }
+    .card ul { padding-left: 20px; }
+    .card ul li { margin-bottom: 4px; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+    .stat-box {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 18px;
+      text-align: center;
+    }
+    .stat-box .value {
+      font-size: 26px;
+      font-weight: 800;
+      color: #1a1a2e;
+    }
+    .stat-box .label {
+      font-size: 12px;
+      color: #6b7280;
+      margin-top: 4px;
+      font-weight: 500;
+    }
+    .tech-tag {
+      display: inline-block;
+      background: #eef2ff;
+      color: #4338ca;
+      padding: 4px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      margin: 3px 3px 0 0;
+    }
+    .yesno {
+      display: flex;
+      gap: 12px;
+      margin-top: 16px;
+      flex-wrap: wrap;
+    }
+    .yesno a {
+      flex: 1;
+      min-width: 160px;
+      text-align: center;
+      padding: 14px 24px;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 700;
+      text-decoration: none;
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+    .yesno a:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+    .btn-sim { background: #059669; color: #fff; }
+    .btn-nao { background: #dc2626; color: #fff; }
+    .btn-duvida { background: #d97706; color: #fff; }
+    .tag-green { background: #d1fae5; color: #065f46; }
+    .tag-blue { background: #dbeafe; color: #1e40af; }
+    .tag-yellow { background: #fef3c7; color: #92400e; }
+    .tag-purple { background: #ede9fe; color: #5b21b6; }
+    .timeline { position: relative; padding-left: 24px; }
+    .timeline::before {
+      content: '';
+      position: absolute;
+      left: 6px; top: 6px; bottom: 6px;
+      width: 2px;
+      background: #e2e8f0;
+    }
+    .tl-item { position: relative; margin-bottom: 20px; }
+    .tl-item::before {
+      content: '';
+      position: absolute;
+      left: -20px; top: 6px;
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      background: #1a1a2e;
+      border: 2px solid #fff;
+    }
+    .tl-item h4 { font-size: 14px; font-weight: 600; }
+    .tl-item p { font-size: 13px; color: #6b7280; margin-top: 2px; }
+    hr { border: none; border-top: 1px solid #e2e8f0; margin: 20px 0; }
+    @media (max-width: 640px) {
+      body { padding: 16px 8px; }
+      .header { padding: 28px 20px; }
+      .header h1 { font-size: 22px; }
+      .card { padding: 20px 16px; }
+      .grid-2, .grid-3 { grid-template-columns: 1fr; }
+      .yesno a { min-width: 100%; }
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <div class="header">
+    <h1>Sistema de Gestão de Entregas</h1>
+    <p class="subtitle">Operação de Logística Local — Última Milha</p>
+    <span class="badge">Proposta Técnica</span>
+  </div>
+
+  <div class="card">
+    <h2><span class="num">1</span> Visão Geral</h2>
+    <p>Sistema web completo para gerenciar o fluxo operacional de uma <strong>empresa de logística local de pequeno porte (até 10 entregadores)</strong>. A empresa recebe carga de um centro de distribuição com nota fiscal/romaneio e precisa controlar: <strong>recebimento → conferência por QR Code → armazenamento → roteirização → distribuição → entrega → acompanhamento em tempo real</strong>.</p>
+    <p style="margin-top:10px;font-size:13px;color:#6b7280;">O sistema <strong>não</strong> inclui cadastro de clientes, emissão fiscal, financeiro, ERP ou controle de veículos — foco exclusivo na última milha.</p>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <h2><span class="num">2</span> Perfis de Usuário</h2>
+      <p><strong>Administrador (Dono):</strong> Acesso completo via painel web (desktop). Responsável por conferir pacotes, importar romaneios, gerenciar entregadores, roteirizar, distribuir, acompanhar entregas e exportar relatórios.</p>
+      <p style="margin-top:10px;"><strong>Entregador:</strong> Acesso via site responsivo mobile-first (PWA). Visualiza rotas, atualiza status, adiciona observações e consulta detalhes dos pacotes.</p>
+      <p style="margin-top:10px;font-size:13px;color:#6b7280;">Autenticação simples (usuário/senha) sem OAuth.</p>
+    </div>
+    <div class="card">
+      <h2><span class="num">3</span> Fluxo Operacional</h2>
+      <div class="timeline">
+        <div class="tl-item"><h4>Importação da Carga</h4><p>XLSX ou PDF (extração automática) ou cadastro manual com foto do romaneio</p></div>
+        <div class="tl-item"><h4>Conferência (Bipagem)</h4><p>Leitura contínua de QR Code com validação, alertas de duplicados e códigos sem correspondência</p></div>
+        <div class="tl-item"><h4>Armazenamento</h4><p>Status "Em estoque" com filtros por bairro, data, código, destinatário</p></div>
+        <div class="tl-item"><h4>Roteirização</h4><p>Geocodificação via API de mapas, agrupamento por proximidade, ordem otimizada, drag-and-drop</p></div>
+        <div class="tl-item"><h4>Distribuição e Entrega</h4><p>Atribuição manual de rotas, PWA com fila offline, registro de entregas com foto para terceiros</p></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2><span class="num">4</span> Diferenciais do Sistema</h2>
+    <div class="grid-3">
+      <div class="stat-box"><div class="value">Offline</div><div class="label">Fila local de sincronização automática para o entregador</div></div>
+      <div class="stat-box"><div class="value">Realtime</div><div class="label">WebSocket (Socket.io) para atualização instantânea no painel</div></div>
+      <div class="stat-box"><div class="value">QR Code</div><div class="label">Leitura contínua com tratamento de duplicados e códigos avulsos</div></div>
+      <div class="stat-box"><div class="value">Falha de Geo</div><div class="label">Endereços não localizados ficam em lista separada com correção manual ou pino no mapa</div></div>
+      <div class="stat-box"><div class="value">Histórico</div><div class="label">Cada pacote possui timeline completa de eventos desde a importação</div></div>
+      <div class="stat-box"><div class="value">Encerramento</div><div class="label">Rota pode ser encerrada com pendências; pacotes retornam ao estoque</div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2><span class="num">5</span> Pilha Tecnológica</h2>
+    <div>
+      <span class="tech-tag">React / Next.js</span>
+      <span class="tech-tag">Tailwind CSS</span>
+      <span class="tech-tag">Node.js</span>
+      <span class="tech-tag">Express / Fastify</span>
+      <span class="tech-tag">PostgreSQL</span>
+      <span class="tech-tag">Socket.io</span>
+      <span class="tech-tag">Google Maps / Mapbox / OSRM</span>
+      <span class="tech-tag">PWA</span>
+      <span class="tech-tag">XLSX / PDF</span>
+    </div>
+    <hr>
+    <h2 style="margin-bottom:8px;">Dashboard &amp; Relatórios</h2>
+    <p>Painel com indicadores em tempo real (esperados, conferidos, estoque, em rota, entregues, ausentes, terceiros) e gráficos de desempenho por entregador, tempo médio por rota e taxa de sucesso. Exportação em XLSX e PDF.</p>
+  </div>
+
+  <div class="card" style="background: #f8fafc; border: 2px solid #e2e8f0;">
+    <h2 style="margin-bottom:12px;">Sua Decisão</h2>
+    <p style="font-size:14px;color:#374151;margin-bottom:12px;">Com base na análise do escopo, complexidade técnica e adequação ao problema, qual é sua avaliação?</p>
+    <div class="yesno">
+      <a href="#" class="btn-sim" onclick="selecionar('sim');return false;">Sim, iniciar projeto</a>
+      <a href="#" class="btn-nao" onclick="selecionar('nao');return false;">Não iniciar</a>
+      <a href="#" class="btn-duvida" onclick="selecionar('duvida');return false;">Preciso analisar mais</a>
+    </div>
+    <div id="resposta" style="margin-top:16px;padding:12px 16px;border-radius:8px;font-weight:600;display:none;"></div>
+  </div>
+
+  <div style="text-align:center;font-size:12px;color:#9ca3af;margin-top:24px;">
+    Documento gerado para avaliação — Julho 2026
+  </div>
+</div>
+
+<script>
+function selecionar(voto) {
+  const div = document.getElementById('resposta');
+  div.style.display = 'block';
+  if (voto === 'sim') {
+    div.style.background = '#d1fae5';
+    div.style.color = '#065f46';
+    div.innerHTML = 'Você optou por <strong>iniciar o projeto</strong>. Recomenda-se começar pela modelagem do banco de dados, seguido da API, telas administrativas e, por último, o aplicativo do entregador.';
+  } else if (voto === 'nao') {
+    div.style.background = '#fee2e2';
+    div.style.color = '#991b1b';
+    div.innerHTML = 'Você optou por <strong>não iniciar</strong>. Considere se o escopo atual atende às necessidades reais ou se pode ser simplificado.';
+  } else {
+    div.style.background = '#fef3c7';
+    div.style.color = '#92400e';
+    div.innerHTML = 'Você precisa <strong>analisar mais</strong>. Pontos sugeridos: valide o fluxo de importação de PDF, avalie custos de API de mapas e teste a viabilidade do PWA offline.';
+  }
+}
+</script>
+</body>
+</html>

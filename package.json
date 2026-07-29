@@ -1,0 +1,5 @@
+{
+  "name": "graxalog",
+  "private": true,
+  "workspaces": ["backend", "admin", "delivery"]
+}
