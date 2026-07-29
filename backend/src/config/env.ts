@@ -8,5 +8,5 @@ export const env = {
   CORS_ORIGIN: (process.env.CORS_ORIGIN || 'http://localhost:3000,http://localhost:3002').split(','),
   MAPS_API_KEY: process.env.MAPS_API_KEY || '',
   STORAGE_PROVIDER: process.env.STORAGE_PROVIDER || 'local',
-  UPLOAD_DIR: process.env.UPLOAD_DIR || './uploads',
+  UPLOAD_DIR: process.env.UPLOAD_DIR || (process.env.VERCEL ? '/tmp/uploads' : './uploads'),
 };

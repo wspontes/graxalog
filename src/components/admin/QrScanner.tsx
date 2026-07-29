@@ -50,34 +50,38 @@ export default function QrScanner({ onScan, onClose }: QrScannerProps) {
 
   return (
     <div className="fixed inset-0 z-50 bg-black flex flex-col">
-      <div className="flex items-center justify-between p-4 text-white">
+      <div className="flex items-center justify-between p-4 text-white shrink-0">
         <span className="text-lg font-semibold">Escaneie o QR Code</span>
         <button onClick={onClose} className="px-4 py-2 bg-white/20 rounded-lg text-sm">Fechar</button>
       </div>
 
-      <div className="flex-1 flex items-center justify-center p-4">
+      <div className="flex-1 relative flex items-center justify-center p-4 min-h-0">
+        <div id="qr-reader" className="w-full max-w-sm rounded-xl overflow-hidden shadow-2xl" />
+
         {status === 'starting' && (
-          <div className="text-white text-center">
-            <div className="animate-spin w-8 h-8 border-4 border-white/30 border-t-white rounded-full mx-auto mb-4" />
-            <p className="text-sm">Iniciando câmera...</p>
+          <div className="absolute inset-0 flex items-center justify-center bg-black/80 rounded-xl">
+            <div className="text-white text-center">
+              <div className="animate-spin w-8 h-8 border-4 border-white/30 border-t-white rounded-full mx-auto mb-4" />
+              <p className="text-sm">Iniciando câmera...</p>
+            </div>
           </div>
         )}
 
         {status === 'error' && (
-          <div className="text-white text-center max-w-sm">
-            <p className="text-lg mb-2">✕</p>
-            <p className="text-sm mb-4">{errorMsg}</p>
-            <p className="text-xs text-white/60 mb-6">
-              Verifique se permitiu o acesso à câmera nas configurações do navegador
-            </p>
-            <button onClick={onClose} className="px-6 py-2 bg-white/20 rounded-lg text-sm">Fechar</button>
+          <div className="absolute inset-0 flex items-center justify-center bg-black/80 rounded-xl p-4">
+            <div className="text-white text-center max-w-sm">
+              <p className="text-lg mb-2">✕</p>
+              <p className="text-sm mb-4">{errorMsg}</p>
+              <p className="text-xs text-white/60 mb-6">
+                Verifique se permitiu o acesso à câmera nas configurações do navegador
+              </p>
+              <button onClick={onClose} className="px-6 py-2 bg-white/20 rounded-lg text-sm">Fechar</button>
+            </div>
           </div>
         )}
-
-        <div id="qr-reader" className={`w-full max-w-sm rounded-xl overflow-hidden shadow-2xl ${status !== 'scanning' ? 'hidden' : ''}`} />
       </div>
 
-      <p className="text-center text-white/60 text-sm pb-6">
+      <p className="text-center text-white/60 text-sm pb-4 shrink-0">
         {status === 'scanning' ? 'Aponte a câmera para o código QR do pacote' : ' '}
       </p>
     </div>

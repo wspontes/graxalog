@@ -15,8 +15,10 @@ process.env.JWT_SECRET = process.env.JWT_SECRET || 'graxalog-jwt-secret-2026';
 
 import '../../backend/src/config/env';
 import routes from '../../backend/src/routes/index';
+import { errorHandler } from '../../backend/src/middleware/errorHandler';
 
 app.use('/api', routes);
+app.use(errorHandler);
 
 export const config = {
   api: {
