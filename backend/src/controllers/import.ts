@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { query } from '../config/database';
-import { parseXLSX } from '../services/import-service';
+import { parseXLSX, parsePDF } from '../services/import-service';
 
 export async function importFile(req: Request, res: Response) {
   if (!req.file) return res.status(400).json({ error: 'Arquivo obrigatório' });
@@ -12,7 +12,6 @@ export async function importFile(req: Request, res: Response) {
   if (ext === 'xlsx' || ext === 'xls') {
     packages = await parseXLSX(file.path);
   } else if (ext === 'pdf') {
-    const { parsePDF } = await import('../services/import-service');
     packages = await parsePDF(file.path);
   } else {
     return res.status(400).json({ error: 'Formato não suportado. Use XLSX ou PDF' });

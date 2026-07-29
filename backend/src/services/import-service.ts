@@ -17,12 +17,7 @@ export async function parseXLSX(filePath: string): Promise<any[]> {
   }));
 }
 
-export async function parsePDF(filePath: string): Promise<any[]> {
-  const fs = require('fs');
-  const pdfParse = require('pdf-parse');
-  const buffer = fs.readFileSync(filePath);
-  const data = await pdfParse(buffer);
-  const text = data.text;
+function parseTextToPackages(text: string): any[] {
   const lines = text.split('\n').filter((l: string) => l.trim());
   const packages: any[] = [];
   let current: any = {};
@@ -42,4 +37,17 @@ export async function parsePDF(filePath: string): Promise<any[]> {
   }
   if (current.code) packages.push(current);
   return packages;
+}
+
+export async function parsePDF(filePath: string): Promise<any[]> {
+  const { getDocument } = await import('pdfjs-dist');
+  const buffer = fs.readFileSync(filePath);
+  const doc = await getDocument({ data: buffer }).promise;
+  let fullText = '';
+  for (let i = 1; i <= doc.numPages; i++) {
+    const page = await doc.getPage(i);
+    const content = await page.getTextContent();
+    fullText += content.items.map((item: any) => item.str).join(' ') + '\n';
+  }
+  return parseTextToPackages(fullText);
 }
