@@ -4,11 +4,13 @@ import { useParams, useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import { addToQueue } from '@/lib/offline-queue';
 import MobileLayout from '@/components/delivery/MobileLayout';
+import dynamic from 'next/dynamic';
+
+const DeliveryMap = dynamic(() => import('@/components/delivery/DeliveryMap'), { ssr: false });
 
 export default function RouteDetailPage() {
   const params = useParams<{ id: string }>();
   const id = params?.id ?? '';
-
   const router = useRouter();
   const [route, setRoute] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -27,15 +29,13 @@ export default function RouteDetailPage() {
 
   async function loadRoute() {
     try {
+      const data = await api.delivery.routeDetail(parseInt(id));
+      setRoute(data);
+    } catch {
       const data = await api.delivery.routes();
       const found = data.find((r: any) => r.id === parseInt(id));
-      if (found) {
-        const detail = await fetch(`http://localhost:3001/api/routes/${id}`, {
-          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-        }).then((r) => r.json());
-        setRoute(detail);
-      }
-    } catch {}
+      if (found) setRoute(found);
+    }
     setLoading(false);
   }
 
@@ -140,15 +140,19 @@ export default function RouteDetailPage() {
         )}
       </div>
 
+      <div className="mb-4">
+        <DeliveryMap packages={packages} />
+      </div>
+
       <div className="space-y-3">
         {packages.map((pkg: any, index: number) => (
-          <div key={pkg.id} className={`bg-white rounded-xl border p-4 ${pkg.status !== 'in_route' ? 'opacity-60' : ''}`}>
+          <div key={pkg.id || pkg.package_id} className={`bg-white rounded-xl border p-4 ${pkg.status !== 'in_route' ? 'opacity-60' : ''}`}>
             <div className="flex justify-between items-start">
               <div>
-                <span className="text-xs text-gray-400">#{pkg.stop_order}</span>
+                <span className="text-xs text-gray-400">#{pkg.stop_order || index + 1}</span>
                 <h3 className="font-semibold text-sm mt-0.5">{pkg.recipient}</h3>
                 <p className="text-xs text-gray-500 mt-0.5">{pkg.address}</p>
-                <p className="text-xs text-gray-400">{pkg.neighborhood}, {pkg.city}</p>
+                <p className="text-xs text-gray-400">{pkg.neighborhood}{pkg.city ? `, ${pkg.city}` : ''}</p>
                 {pkg.notes && <p className="text-xs mt-1 text-gray-500 italic">{pkg.notes}</p>}
                 {pkg.photo_url && (
                   <img src={pkg.photo_url} alt="Comprovante" className="mt-2 rounded-lg max-h-32 object-cover" />
@@ -165,28 +169,27 @@ export default function RouteDetailPage() {
             </div>
 
             {pkg.status === 'in_route' && (
-              <div className="flex gap-2 mt-3">
-                <button onClick={() => handleUpdate(pkg.package_id, 'delivered')} className="flex-1 py-2.5 bg-emerald-600 text-white rounded-lg text-sm font-medium">
-                  Entregue
-                </button>
-                <button onClick={() => handleUpdate(pkg.package_id, 'absent')} className="flex-1 py-2.5 bg-orange-500 text-white rounded-lg text-sm font-medium">
-                  Ausente
-                </button>
-                <button onClick={() => handleUpdate(pkg.package_id, 'third_party')} className="flex-1 py-2.5 bg-purple-600 text-white rounded-lg text-sm font-medium">
-                  Terceiro
-                </button>
-              </div>
-            )}
-
-            {pkg.status === 'in_route' && (
-              <div className="mt-2">
-                <input
-                  placeholder="Observação (opcional)"
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
-                />
-              </div>
+              <>
+                <div className="flex gap-2 mt-3">
+                  <button onClick={() => handleUpdate(pkg.package_id || pkg.id, 'delivered')} className="flex-1 py-2.5 bg-emerald-600 text-white rounded-lg text-sm font-medium">
+                    Entregue
+                  </button>
+                  <button onClick={() => handleUpdate(pkg.package_id || pkg.id, 'absent')} className="flex-1 py-2.5 bg-orange-500 text-white rounded-lg text-sm font-medium">
+                    Ausente
+                  </button>
+                  <button onClick={() => handleUpdate(pkg.package_id || pkg.id, 'third_party')} className="flex-1 py-2.5 bg-purple-600 text-white rounded-lg text-sm font-medium">
+                    Terceiro
+                  </button>
+                </div>
+                <div className="mt-2">
+                  <input
+                    placeholder="Observação (opcional)"
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
+                  />
+                </div>
+              </>
             )}
           </div>
         ))}

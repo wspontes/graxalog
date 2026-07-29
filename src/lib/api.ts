@@ -85,6 +85,7 @@ export const api = {
   },
   delivery: {
     routes: () => request('/delivery/routes'),
+    routeDetail: (id: number) => request(`/delivery/routes/${id}`),
     startRoute: (id: number) => request(`/delivery/routes/${id}/start`, { method: 'PUT' }),
     finishRoute: (id: number) => request(`/delivery/routes/${id}/finish`, { method: 'PUT' }),
     updateStatus: (routeId: number, packageId: number, data: FormData) =>

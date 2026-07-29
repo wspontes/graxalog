@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getDeliveryRoutes, startRoute, finishRoute, updatePackageStatus, editDelivery } from '../controllers/delivery';
+import { getDeliveryRoutes, getDeliveryRouteById, startRoute, finishRoute, updatePackageStatus, editDelivery } from '../controllers/delivery';
 import { authenticate, authorize } from '../middleware/auth';
 import { upload } from '../services/photo-storage';
 
@@ -8,6 +8,7 @@ router.use(authenticate);
 router.use(authorize('delivery'));
 
 router.get('/routes', getDeliveryRoutes);
+router.get('/routes/:id', getDeliveryRouteById);
 router.put('/routes/:id/start', startRoute);
 router.put('/routes/:id/finish', finishRoute);
 router.put('/routes/:routeId/packages/:packageId', upload.single('photo'), updatePackageStatus);

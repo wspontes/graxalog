@@ -14,6 +14,28 @@ export async function getDeliveryRoutes(req: Request, res: Response) {
   res.json(result.rows);
 }
 
+export async function getDeliveryRouteById(req: Request, res: Response) {
+  const userId = (req as any).userId;
+  const { id } = req.params;
+  const route = await query(
+    `SELECT r.*, u.name as delivery_person_name
+     FROM routes r
+     LEFT JOIN users u ON u.id = r.delivery_person_id
+     WHERE r.id = $1 AND r.delivery_person_id = $2`,
+    [id, userId]
+  );
+  if (route.rows.length === 0) return res.status(404).json({ error: 'Rota não encontrada' });
+  const packages = await query(
+    `SELECT rp.*, p.code, p.recipient, p.address, p.neighborhood, p.city, p.latitude, p.longitude
+     FROM route_packages rp
+     JOIN packages p ON p.id = rp.package_id
+     WHERE rp.route_id = $1
+     ORDER BY rp.stop_order`,
+    [id]
+  );
+  res.json({ ...route.rows[0], packages: packages.rows });
+}
+
 export async function startRoute(req: Request, res: Response) {
   const { id } = req.params;
   const userId = (req as any).userId;
