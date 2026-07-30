@@ -87,6 +87,7 @@ export const api = {
     routes: (params?: Record<string, string>) =>
       request(`/delivery/routes?${new URLSearchParams(params || {})}`),
     routeDetail: (id: number) => request(`/delivery/routes/${id}`),
+    geocodeRoute: (id: number) => request(`/delivery/routes/${id}/geocode`, { method: 'POST' }),
     startRoute: (id: number) => request(`/delivery/routes/${id}/start`, { method: 'PUT' }),
     finishRoute: (id: number) => request(`/delivery/routes/${id}/finish`, { method: 'PUT' }),
     updateStatus: (routeId: number, packageId: number, data: FormData) =>

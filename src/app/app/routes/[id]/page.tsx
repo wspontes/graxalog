@@ -20,6 +20,7 @@ export default function RouteDetailPage() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [showCamera, setShowCamera] = useState(false);
+  const [geocoding, setGeocoding] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -118,6 +119,17 @@ export default function RouteDetailPage() {
     }
   }
 
+  async function handleGeocode() {
+    setGeocoding(true);
+    try {
+      const updated = await api.delivery.geocodeRoute(parseInt(id));
+      setRoute(updated);
+    } catch (e) {
+      console.error('Geocoding error:', e);
+    }
+    setGeocoding(false);
+  }
+
   if (loading) return <MobileLayout><p className="text-center text-gray-400 mt-8">Carregando...</p></MobileLayout>;
   if (!route) return <MobileLayout><p className="text-center text-gray-400 mt-8">Rota não encontrada</p></MobileLayout>;
 
@@ -141,7 +153,7 @@ export default function RouteDetailPage() {
       </div>
 
       <div className="mb-4">
-        <DeliveryMap packages={packages} />
+        <DeliveryMap packages={packages} geocoding={geocoding} onGeocode={handleGeocode} />
       </div>
 
       <div className="space-y-3">

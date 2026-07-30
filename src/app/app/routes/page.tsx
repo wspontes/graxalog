@@ -15,6 +15,7 @@ export default function RoutesPage() {
   const [pendingCount, setPendingCount] = useState(0);
   const [tab, setTab] = useState<'active' | 'history'>('active');
   const [selectedRoute, setSelectedRoute] = useState<any>(null);
+  const [geocoding, setGeocoding] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -52,6 +53,18 @@ export default function RoutesPage() {
   if (loading) return <MobileLayout><p className="text-center text-gray-400 mt-8">Carregando...</p></MobileLayout>;
 
   const routes = tab === 'active' ? activeRoutes : historyRoutes;
+
+  async function handleGeocode() {
+    if (!selectedRoute) return;
+    setGeocoding(true);
+    try {
+      const updated = await api.delivery.geocodeRoute(selectedRoute.id);
+      setSelectedRoute(updated);
+    } catch (e) {
+      console.error('Geocoding error:', e);
+    }
+    setGeocoding(false);
+  }
 
   async function loadRouteDetail(id: number) {
     try {
@@ -153,7 +166,7 @@ export default function RoutesPage() {
 
             {(selectedRoute.packages?.length > 0) && (
               <div className="mb-4">
-                <DeliveryMap packages={selectedRoute.packages} />
+                <DeliveryMap packages={selectedRoute.packages} geocoding={geocoding} onGeocode={handleGeocode} />
               </div>
             )}
 

@@ -28,7 +28,11 @@ function getIcon(index: number) {
   });
 }
 
-export default function DeliveryMap({ packages }: { packages: Package[] }) {
+function fullAddress(pkg: Package) {
+  return [pkg.address, pkg.neighborhood, pkg.city].filter(Boolean).join(', ');
+}
+
+export default function DeliveryMap({ packages, geocoding, onGeocode }: { packages: Package[]; geocoding?: boolean; onGeocode?: () => void }) {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -44,38 +48,95 @@ export default function DeliveryMap({ packages }: { packages: Package[] }) {
     .filter(p => p.latitude && p.longitude)
     .map(p => [Number(p.latitude), Number(p.longitude)]);
 
-  if (!mounted || coords.length === 0) {
+  const hasCoords = coords.length > 0;
+
+  if (!mounted) {
     return (
       <div className="bg-white rounded-xl border p-6 text-center text-gray-400 text-sm">
-        {!mounted ? 'Carregando mapa...' : 'Mapa indisponível — pacotes sem coordenadas'}
+        Carregando mapa...
       </div>
     );
   }
 
-  const center: [number, number] = coords.length === 1
-    ? coords[0]
-    : [
-        coords.reduce((s, c) => s + c[0], 0) / coords.length,
-        coords.reduce((s, c) => s + c[1], 0) / coords.length,
-      ];
+  if (!hasCoords && !onGeocode) {
+    return (
+      <div className="bg-white rounded-xl border p-6 text-center text-gray-400 text-sm">
+        Mapa indisponível — pacotes sem coordenadas
+      </div>
+    );
+  }
 
   return (
-    <div className="rounded-xl overflow-hidden border h-[300px] lg:h-[400px]">
-      <MapContainer center={center} zoom={14} className="h-full w-full" scrollWheelZoom>
-        <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-        {coords.length > 1 && <Polyline positions={coords} color="#3b82f6" weight={3} opacity={0.6} />}
-        {packages.filter(p => p.latitude && p.longitude).map((pkg, i) => (
-          <Marker key={pkg.package_id} position={[Number(pkg.latitude), Number(pkg.longitude)]} icon={getIcon(i)}>
-            <Popup>
-              <div className="text-xs">
-                <strong>{pkg.recipient}</strong><br />
-                {pkg.address}<br />
-                {pkg.neighborhood}{pkg.city ? `, ${pkg.city}` : ''}
-              </div>
-            </Popup>
-          </Marker>
+    <div>
+      {!hasCoords && onGeocode && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4 text-center">
+          <p className="text-amber-800 text-sm mb-3">
+            Os pacotes desta rota não possuem coordenadas geográficas. Clique abaixo para geocodificar os endereços automaticamente.
+          </p>
+          <button
+            onClick={onGeocode}
+            disabled={geocoding}
+            className="bg-amber-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-amber-700 disabled:opacity-50"
+          >
+            {geocoding ? 'Geocodificando...' : 'Geocodificar Endereços'}
+          </button>
+        </div>
+      )}
+      {hasCoords && (
+        <div className="rounded-xl overflow-hidden border h-[300px] lg:h-[400px]">
+          <MapContainer center={
+            coords.length === 1
+              ? coords[0]
+              : [coords.reduce((s, c) => s + c[0], 0) / coords.length, coords.reduce((s, c) => s + c[1], 0) / coords.length]
+          } zoom={14} className="h-full w-full" scrollWheelZoom>
+            <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+            {coords.length > 1 && <Polyline positions={coords} color="#3b82f6" weight={3} opacity={0.6} />}
+            {packages.filter(p => p.latitude && p.longitude).map((pkg, i) => (
+              <Marker key={pkg.package_id} position={[Number(pkg.latitude), Number(pkg.longitude)]} icon={getIcon(i)}>
+                <Popup>
+                  <div className="text-xs">
+                    <strong>#{i + 1} - {pkg.recipient}</strong><br />
+                    {fullAddress(pkg)}
+                  </div>
+                </Popup>
+              </Marker>
+            ))}
+          </MapContainer>
+        </div>
+      )}
+      <div className="mt-3 space-y-2">
+        {packages.map((pkg, i) => (
+          <div key={pkg.package_id} className="flex items-center justify-between bg-white rounded-lg border p-3 text-sm">
+            <div className="flex-1 min-w-0 mr-2">
+              <span className="inline-flex items-center justify-center w-6 h-6 rounded-full text-white text-xs font-bold mr-2 shrink-0" style={{ backgroundColor: colors[i % colors.length] }}>
+                {i + 1}
+              </span>
+              <span className="font-medium">{pkg.recipient}</span>
+              <span className="text-gray-500 ml-1">— {fullAddress(pkg)}</span>
+            </div>
+            <div className="flex gap-1 shrink-0">
+              <a
+                href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(fullAddress(pkg))}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-blue-600 underline whitespace-nowrap"
+              >
+                Google Maps
+              </a>
+              {pkg.latitude && pkg.longitude && (
+                <a
+                  href={`https://www.waze.com/ul?ll=${pkg.latitude},${pkg.longitude}&navigate=yes`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs text-blue-600 underline whitespace-nowrap ml-2"
+                >
+                  Waze
+                </a>
+              )}
+            </div>
+          </div>
         ))}
-      </MapContainer>
+      </div>
     </div>
   );
 }

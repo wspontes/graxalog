@@ -131,6 +131,60 @@ export async function updatePackageStatus(req: Request, res: Response) {
   res.json(result.rows[0]);
 }
 
+async function geocodeAddress(address: string): Promise<{ lat: number; lng: number } | null> {
+  try {
+    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&limit=1`;
+    const res = await fetch(url, { headers: { 'User-Agent': 'Graxalog/1.0' } });
+    const data = await res.json();
+    if (data?.length > 0) return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
+    return null;
+  } catch { return null; }
+}
+
+export async function geocodeRoutePackages(req: Request, res: Response) {
+  const userId = (req as any).userId;
+  const { id } = req.params;
+  const route = await query(
+    'SELECT id FROM routes WHERE id = $1 AND delivery_person_id = $2',
+    [id, userId]
+  );
+  if (route.rows.length === 0) return res.status(404).json({ error: 'Rota não encontrada' });
+
+  const packages = await query(
+    `SELECT p.id, p.address, p.neighborhood, p.city, p.latitude, p.longitude
+     FROM route_packages rp JOIN packages p ON p.id = rp.package_id
+     WHERE rp.route_id = $1 AND (p.latitude IS NULL OR p.longitude IS NULL)`,
+    [id]
+  );
+
+  const results: { id: number; lat: number | null; lng: number | null }[] = [];
+  for (let i = 0; i < packages.rows.length; i++) {
+    const pkg = packages.rows[i];
+    const parts = [pkg.address, pkg.neighborhood, pkg.city].filter(Boolean);
+    const addressStr = parts.join(', ');
+    const coords = await geocodeAddress(addressStr);
+    if (coords) {
+      await query('UPDATE packages SET latitude = $1, longitude = $2 WHERE id = $3', [coords.lat, coords.lng, pkg.id]);
+      results.push({ id: pkg.id, lat: coords.lat, lng: coords.lng });
+    } else {
+      results.push({ id: pkg.id, lat: null, lng: null });
+    }
+    if (i < packages.rows.length - 1) await new Promise(r => setTimeout(r, 1100));
+  }
+
+  const routeData = await query(
+    `SELECT r.*, u.name as delivery_person_name
+     FROM routes r LEFT JOIN users u ON u.id = r.delivery_person_id
+     WHERE r.id = $1 AND r.delivery_person_id = $2`, [id, userId]
+  );
+  const packagesData = await query(
+    `SELECT rp.*, p.code, p.recipient, p.address, p.neighborhood, p.city, p.latitude, p.longitude
+     FROM route_packages rp JOIN packages p ON p.id = rp.package_id
+     WHERE rp.route_id = $1 ORDER BY rp.stop_order`, [id]
+  );
+  res.json({ ...routeData.rows[0], packages: packagesData.rows });
+}
+
 export async function editDelivery(req: Request, res: Response) {
   const { routeId, packageId } = req.params;
   const { status, notes } = req.body;
