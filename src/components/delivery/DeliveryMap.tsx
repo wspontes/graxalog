@@ -62,13 +62,32 @@ function nearestNeighbor(start: [number, number], points: [number, number][]): n
   return order;
 }
 
-function MapResize({ packages }: { packages: Package[] }) {
+function MapController({ coords }: { coords: [number, number][] }) {
   const map = useMap();
-  useEffect(() => { setTimeout(() => map.invalidateSize(), 100); }, [packages, map]);
+
+  useEffect(() => {
+    const raf = requestAnimationFrame(() => {
+      map.invalidateSize();
+      if (coords.length > 0) {
+        const bounds = L.latLngBounds(coords);
+        map.fitBounds(bounds, { padding: [50, 50], maxZoom: 16 });
+      }
+      setTimeout(() => map.invalidateSize(), 300);
+    });
+    return () => cancelAnimationFrame(raf);
+  }, []);
+
+  useEffect(() => {
+    if (coords.length > 0) {
+      const bounds = L.latLngBounds(coords);
+      map.fitBounds(bounds, { padding: [50, 50], maxZoom: 16 });
+    }
+  }, [coords.length]);
+
   return null;
 }
 
-export default function DeliveryMap({ packages, geocoding, onGeocode, onReorder }: { packages: Package[]; geocoding?: boolean; onGeocode?: () => void; onReorder?: (ordered: Package[]) => void }) {
+export default function DeliveryMap({ packages, geocoding, onGeocode, onReorder, visible = true }: { packages: Package[]; geocoding?: boolean; onGeocode?: () => void; onReorder?: (ordered: Package[]) => void; visible?: boolean }) {
   const [mounted, setMounted] = useState(false);
   const [userPos, setUserPos] = useState<[number, number] | null>(null);
   const [ordered, setOrdered] = useState<Package[]>(packages);
@@ -85,16 +104,11 @@ export default function DeliveryMap({ packages, geocoding, onGeocode, onReorder 
     setMounted(true);
   }, []);
 
-  const prevJson = JSON.stringify(prevPkgRef.current);
   useEffect(() => {
-    const curJson = JSON.stringify(packages);
-    if (curJson !== prevJson) {
-      setOrdered(packages);
-      prevPkgRef.current = packages;
-    }
+    setOrdered(packages);
+    prevPkgRef.current = packages;
   }, [packages]);
 
-  const normalDisplay = ordered === packages || ordered.length === 0;
   const displayPackages = ordered;
   const coords: [number, number][] = displayPackages
     .filter(p => p.latitude && p.longitude)
@@ -125,11 +139,12 @@ export default function DeliveryMap({ packages, geocoding, onGeocode, onReorder 
     onReorder?.([...reordered, ...without]);
   }, [userPos, displayPackages, onReorder]);
 
-  const mapsUrl = hasCoords
-    ? `https://www.google.com/maps/dir/${userPos ? `${userPos[0]},${userPos[1]}` : ''}/${displayPackages.filter(p => p.latitude && p.longitude).map(p => `${p.latitude},${p.longitude}`).join('/')}`
+  const mapsUrl = hasCoords && coords.length > 0
+    ? `https://www.google.com/maps/dir/${userPos ? `${userPos[0]},${userPos[1]}` : ''}/${coords.map(c => `${c[0]},${c[1]}`).join('/')}`
     : '#';
 
   const mapHeight = fullscreen ? 'calc(100vh - 120px)' : '280px';
+  const showMap = mounted && visible && hasCoords;
 
   if (!mounted) {
     return (
@@ -173,14 +188,16 @@ export default function DeliveryMap({ packages, geocoding, onGeocode, onReorder 
             >
               {optimizing ? 'Otimizando...' : userPos ? 'Reordenar por Proximidade' : 'Otimizar Rota (usar localização)'}
             </button>
-            <a
-              href={mapsUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="py-2 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 whitespace-nowrap"
-            >
-              Google Maps
-            </a>
+            {coords.length > 0 && (
+              <a
+                href={mapsUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="py-2 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 whitespace-nowrap"
+              >
+                Google Maps
+              </a>
+            )}
             <button
               onClick={() => setFullscreen(!fullscreen)}
               className="py-2 px-3 bg-gray-100 text-gray-600 rounded-lg text-sm hover:bg-gray-200"
@@ -188,24 +205,31 @@ export default function DeliveryMap({ packages, geocoding, onGeocode, onReorder 
               {fullscreen ? '✕' : '⛶'}
             </button>
           </div>
-          <div className={`rounded-xl overflow-hidden border`} style={{ height: mapHeight }}>
-            <MapContainer center={
-              coords.length === 1 ? coords[0] : [coords.reduce((s, c) => s + c[0], 0) / coords.length, coords.reduce((s, c) => s + c[1], 0) / coords.length]
-            } zoom={14} className="h-full w-full" scrollWheelZoom={true}>
-              <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-              <MapResize packages={displayPackages} />
-              {coords.length > 1 && <Polyline positions={coords} color="#3b82f6" weight={3} opacity={0.6} />}
-              {displayPackages.filter(p => p.latitude && p.longitude).map((pkg, i) => (
-                <Marker key={pkg.package_id} position={[Number(pkg.latitude), Number(pkg.longitude)]} icon={getIcon(i)}>
-                  <Popup>
-                    <div className="text-xs">
-                      <strong>#{i + 1} - {pkg.recipient}</strong><br />
-                      {fullAddress(pkg)}
-                    </div>
-                  </Popup>
-                </Marker>
-              ))}
-            </MapContainer>
+          <div className="rounded-xl overflow-hidden border" style={{ height: mapHeight, minHeight: mapHeight }}>
+            {showMap && (
+              <MapContainer
+                key={`${fullscreen}-${coords.length}`}
+                center={coords[0]}
+                zoom={14}
+                className="h-full w-full"
+                scrollWheelZoom={true}
+                zoomControl={true}
+              >
+                <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                <MapController coords={coords} />
+                {coords.length > 1 && <Polyline positions={coords} color="#3b82f6" weight={3} opacity={0.6} />}
+                {displayPackages.filter(p => p.latitude && p.longitude).map((pkg, i) => (
+                  <Marker key={pkg.package_id} position={[Number(pkg.latitude), Number(pkg.longitude)]} icon={getIcon(i)}>
+                    <Popup>
+                      <div className="text-xs">
+                        <strong>#{i + 1} - {pkg.recipient}</strong><br />
+                        {fullAddress(pkg)}
+                      </div>
+                    </Popup>
+                  </Marker>
+                ))}
+              </MapContainer>
+            )}
           </div>
         </>
       )}
