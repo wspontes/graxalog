@@ -1,6 +1,6 @@
 'use client';
-import { useEffect, useState } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, Polyline } from 'react-leaflet';
+import { useEffect, useState, useCallback, useRef } from 'react';
+import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
 import L from 'leaflet';
 
 interface Package {
@@ -32,8 +32,49 @@ function fullAddress(pkg: Package) {
   return [pkg.address, pkg.neighborhood, pkg.city].filter(Boolean).join(', ');
 }
 
-export default function DeliveryMap({ packages, geocoding, onGeocode }: { packages: Package[]; geocoding?: boolean; onGeocode?: () => void }) {
+function haversine(a: [number, number], b: [number, number]) {
+  const R = 6371;
+  const dLat = (b[0] - a[0]) * Math.PI / 180;
+  const dLng = (b[1] - a[1]) * Math.PI / 180;
+  const sLat = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(a[0] * Math.PI / 180) * Math.cos(b[0] * Math.PI / 180) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+  const c = 2 * Math.atan2(Math.sqrt(sLat), Math.sqrt(1 - sLat));
+  return R * c;
+}
+
+function nearestNeighbor(start: [number, number], points: [number, number][]): number[] {
+  const visited = new Set<number>();
+  const order: number[] = [];
+  let current = start;
+  while (order.length < points.length) {
+    let nearest = -1;
+    let minDist = Infinity;
+    for (let i = 0; i < points.length; i++) {
+      if (!visited.has(i)) {
+        const d = haversine(current, points[i]);
+        if (d < minDist) { minDist = d; nearest = i; }
+      }
+    }
+    if (nearest === -1) break;
+    visited.add(nearest);
+    order.push(nearest);
+    current = points[nearest];
+  }
+  return order;
+}
+
+function MapResize({ packages }: { packages: Package[] }) {
+  const map = useMap();
+  useEffect(() => { setTimeout(() => map.invalidateSize(), 100); }, [packages, map]);
+  return null;
+}
+
+export default function DeliveryMap({ packages, geocoding, onGeocode, onReorder }: { packages: Package[]; geocoding?: boolean; onGeocode?: () => void; onReorder?: (ordered: Package[]) => void }) {
   const [mounted, setMounted] = useState(false);
+  const [userPos, setUserPos] = useState<[number, number] | null>(null);
+  const [ordered, setOrdered] = useState<Package[]>(packages);
+  const [optimizing, setOptimizing] = useState(false);
+  const [fullscreen, setFullscreen] = useState(false);
+  const prevPkgRef = useRef(packages);
 
   useEffect(() => {
     L.Icon.Default.mergeOptions({
@@ -44,11 +85,51 @@ export default function DeliveryMap({ packages, geocoding, onGeocode }: { packag
     setMounted(true);
   }, []);
 
-  const coords: [number, number][] = packages
+  const prevJson = JSON.stringify(prevPkgRef.current);
+  useEffect(() => {
+    const curJson = JSON.stringify(packages);
+    if (curJson !== prevJson) {
+      setOrdered(packages);
+      prevPkgRef.current = packages;
+    }
+  }, [packages]);
+
+  const normalDisplay = ordered === packages || ordered.length === 0;
+  const displayPackages = ordered;
+  const coords: [number, number][] = displayPackages
     .filter(p => p.latitude && p.longitude)
     .map(p => [Number(p.latitude), Number(p.longitude)]);
-
   const hasCoords = coords.length > 0;
+
+  const handleOptimize = useCallback(async () => {
+    let pos = userPos;
+    if (!pos) {
+      setOptimizing(true);
+      try {
+        const p = await new Promise<GeolocationPosition>((resolve, reject) => navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true, timeout: 10000 }));
+        pos = [p.coords.latitude, p.coords.longitude];
+        setUserPos(pos);
+      } catch {
+        setOptimizing(false);
+        return;
+      }
+    }
+    const withCoords = displayPackages.filter(p => p.latitude && p.longitude);
+    if (withCoords.length < 2) { setOptimizing(false); return; }
+    const pts: [number, number][] = withCoords.map(p => [Number(p.latitude), Number(p.longitude)]);
+    const idxOrder = nearestNeighbor(pos, pts);
+    const reordered = idxOrder.map(i => withCoords[i]);
+    const without = displayPackages.filter(p => !p.latitude || !p.longitude);
+    setOrdered([...reordered, ...without]);
+    setOptimizing(false);
+    onReorder?.([...reordered, ...without]);
+  }, [userPos, displayPackages, onReorder]);
+
+  const mapsUrl = hasCoords
+    ? `https://www.google.com/maps/dir/${userPos ? `${userPos[0]},${userPos[1]}` : ''}/${displayPackages.filter(p => p.latitude && p.longitude).map(p => `${p.latitude},${p.longitude}`).join('/')}`
+    : '#';
+
+  const mapHeight = fullscreen ? 'calc(100vh - 120px)' : '280px';
 
   if (!mounted) {
     return (
@@ -83,29 +164,53 @@ export default function DeliveryMap({ packages, geocoding, onGeocode }: { packag
         </div>
       )}
       {hasCoords && (
-        <div className="rounded-xl overflow-hidden border h-[300px] lg:h-[400px]">
-          <MapContainer center={
-            coords.length === 1
-              ? coords[0]
-              : [coords.reduce((s, c) => s + c[0], 0) / coords.length, coords.reduce((s, c) => s + c[1], 0) / coords.length]
-          } zoom={14} className="h-full w-full" scrollWheelZoom>
-            <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-            {coords.length > 1 && <Polyline positions={coords} color="#3b82f6" weight={3} opacity={0.6} />}
-            {packages.filter(p => p.latitude && p.longitude).map((pkg, i) => (
-              <Marker key={pkg.package_id} position={[Number(pkg.latitude), Number(pkg.longitude)]} icon={getIcon(i)}>
-                <Popup>
-                  <div className="text-xs">
-                    <strong>#{i + 1} - {pkg.recipient}</strong><br />
-                    {fullAddress(pkg)}
-                  </div>
-                </Popup>
-              </Marker>
-            ))}
-          </MapContainer>
-        </div>
+        <>
+          <div className="flex gap-2 mb-2">
+            <button
+              onClick={handleOptimize}
+              disabled={optimizing}
+              className="flex-1 py-2 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700 disabled:opacity-50"
+            >
+              {optimizing ? 'Otimizando...' : userPos ? 'Reordenar por Proximidade' : 'Otimizar Rota (usar localização)'}
+            </button>
+            <a
+              href={mapsUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="py-2 px-3 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 whitespace-nowrap"
+            >
+              Google Maps
+            </a>
+            <button
+              onClick={() => setFullscreen(!fullscreen)}
+              className="py-2 px-3 bg-gray-100 text-gray-600 rounded-lg text-sm hover:bg-gray-200"
+            >
+              {fullscreen ? '✕' : '⛶'}
+            </button>
+          </div>
+          <div className={`rounded-xl overflow-hidden border`} style={{ height: mapHeight }}>
+            <MapContainer center={
+              coords.length === 1 ? coords[0] : [coords.reduce((s, c) => s + c[0], 0) / coords.length, coords.reduce((s, c) => s + c[1], 0) / coords.length]
+            } zoom={14} className="h-full w-full" scrollWheelZoom={true}>
+              <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+              <MapResize packages={displayPackages} />
+              {coords.length > 1 && <Polyline positions={coords} color="#3b82f6" weight={3} opacity={0.6} />}
+              {displayPackages.filter(p => p.latitude && p.longitude).map((pkg, i) => (
+                <Marker key={pkg.package_id} position={[Number(pkg.latitude), Number(pkg.longitude)]} icon={getIcon(i)}>
+                  <Popup>
+                    <div className="text-xs">
+                      <strong>#{i + 1} - {pkg.recipient}</strong><br />
+                      {fullAddress(pkg)}
+                    </div>
+                  </Popup>
+                </Marker>
+              ))}
+            </MapContainer>
+          </div>
+        </>
       )}
-      <div className="mt-3 space-y-2">
-        {packages.map((pkg, i) => (
+      <div className={`mt-3 space-y-2 ${fullscreen ? 'max-h-40 overflow-y-auto' : ''}`}>
+        {displayPackages.map((pkg, i) => (
           <div key={pkg.package_id} className="flex items-center justify-between bg-white rounded-lg border p-3 text-sm">
             <div className="flex-1 min-w-0 mr-2">
               <span className="inline-flex items-center justify-center w-6 h-6 rounded-full text-white text-xs font-bold mr-2 shrink-0" style={{ backgroundColor: colors[i % colors.length] }}>
@@ -115,23 +220,9 @@ export default function DeliveryMap({ packages, geocoding, onGeocode }: { packag
               <span className="text-gray-500 ml-1">— {fullAddress(pkg)}</span>
             </div>
             <div className="flex gap-1 shrink-0">
-              <a
-                href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(fullAddress(pkg))}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-xs text-blue-600 underline whitespace-nowrap"
-              >
-                Google Maps
-              </a>
+              <a href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(fullAddress(pkg))}`} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 underline whitespace-nowrap">Maps</a>
               {pkg.latitude && pkg.longitude && (
-                <a
-                  href={`https://www.waze.com/ul?ll=${pkg.latitude},${pkg.longitude}&navigate=yes`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-xs text-blue-600 underline whitespace-nowrap ml-2"
-                >
-                  Waze
-                </a>
+                <a href={`https://www.waze.com/ul?ll=${pkg.latitude},${pkg.longitude}&navigate=yes`} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 underline whitespace-nowrap ml-2">Waze</a>
               )}
             </div>
           </div>

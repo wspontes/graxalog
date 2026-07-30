@@ -166,7 +166,7 @@ export default function RoutesPage() {
 
             {(selectedRoute.packages?.length > 0) && (
               <div className="mb-4">
-                <DeliveryMap packages={selectedRoute.packages} geocoding={geocoding} onGeocode={handleGeocode} />
+                <DeliveryMap packages={selectedRoute.packages} geocoding={geocoding} onGeocode={handleGeocode} onReorder={(ordered) => setSelectedRoute({ ...selectedRoute, packages: ordered })} />
               </div>
             )}
 

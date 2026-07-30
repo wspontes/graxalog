@@ -153,7 +153,7 @@ export default function RouteDetailPage() {
       </div>
 
       <div className="mb-4">
-        <DeliveryMap packages={packages} geocoding={geocoding} onGeocode={handleGeocode} />
+        <DeliveryMap packages={packages} geocoding={geocoding} onGeocode={handleGeocode} onReorder={(ordered) => setRoute({ ...route, packages: ordered })} />
       </div>
 
       <div className="space-y-3">
