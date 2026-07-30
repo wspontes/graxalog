@@ -84,7 +84,8 @@ export const api = {
     conferenceFinish: () => request('/import/conference/finish', { method: 'POST' }),
   },
   delivery: {
-    routes: () => request('/delivery/routes'),
+    routes: (params?: Record<string, string>) =>
+      request(`/delivery/routes?${new URLSearchParams(params || {})}`),
     routeDetail: (id: number) => request(`/delivery/routes/${id}`),
     startRoute: (id: number) => request(`/delivery/routes/${id}/start`, { method: 'PUT' }),
     finishRoute: (id: number) => request(`/delivery/routes/${id}/finish`, { method: 'PUT' }),

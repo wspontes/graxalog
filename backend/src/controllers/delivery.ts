@@ -3,14 +3,18 @@ import { query } from '../config/database';
 
 export async function getDeliveryRoutes(req: Request, res: Response) {
   const userId = (req as any).userId;
-  const result = await query(
-    `SELECT r.*, u.name as delivery_person_name
+  const { history } = req.query;
+  let sql = `SELECT r.*, u.name as delivery_person_name
      FROM routes r
      LEFT JOIN users u ON u.id = r.delivery_person_id
-     WHERE r.delivery_person_id = $1 AND r.status IN ('not_started', 'in_progress')
-     ORDER BY r.created_at DESC`,
-    [userId]
-  );
+     WHERE r.delivery_person_id = $1`;
+  if (history !== 'true') {
+    sql += ` AND r.status IN ('not_started', 'in_progress')`;
+  } else {
+    sql += ` AND r.status IN ('completed', 'partially_completed')`;
+  }
+  sql += ` ORDER BY r.created_at DESC`;
+  const result = await query(sql, [userId]);
   res.json(result.rows);
 }
 
